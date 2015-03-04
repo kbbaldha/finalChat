@@ -1,0 +1,3 @@
+debug --- http://ryanlanciaux.github.io/blog/2014/05/25/debugging-express-applications/
+
+login logout ref --- http://codeforgeek.com/2014/09/manage-session-using-node-js-express-4/

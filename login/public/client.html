@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" href="/imgs/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="/stylesheets/clientStyle.css" />
+    <link href="stylesheets/bootstrap.css" rel="stylesheet" />
+    <script src="/scripts/jquery-2.1.3.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/scripts/constants.js"></script>
+    <script src="/scripts/angular.min.js"></script>
+    <script src="/scripts/angular-animate.js"></script>
+    <script src="scripts/bootstrap.js"></script>
+    <script src="scripts/bootstrap-tooltip.js"></script>
+    <title>Chat Application</title>
+
+</head>
+<body ng-app="myChatApp">
+
+    <nav class="navbar navbar-inverse navbar-static-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <img alt="Chat Application" class="nav-brand-image" src="imgs/chat-logo.png">
+                <a class="navbar-brand" href="#">Chat Application</a> <!-- Logo used from http://pixelit.com -->
+            </div>
+            <div class="collapse navbar-collapse navbar-right navbar-form" id="bs-example-navbar-collapse-1">
+                <button class="btn btn-danger" onclick="logout()">Logout</button>
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container-fluid -->
+    </nav>
+    <div class="container">
+        <div class="page-header row">
+            <h1 id="user" class=""></h1>
+        </div>
+        <div id="chat-control" class="container">
+            <div class="row">
+                <div class="col-md-9">
+                    <div ng-controller="friendListCtrl" class="row">
+                        <div class="col-md-4">
+                            <div role="tabpanel">
+                                <!-- Nav tabs -->
+                                <ul class="nav nav-tabs nav-justified" role="tablist">
+                                    <li role="presentation" class="active"><a href="#friends" aria-controls="home" role="tab" data-toggle="tab">Friends</a></li>
+                                    <li role="presentation"><a href="#findFriends" aria-controls="profile" role="tab" data-toggle="tab">Find&nbsp;Friends</a></li>
+                                </ul>
+                                <!-- Tab panes -->
+                                <div class="tab-content">
+                                    <div role="tabpanel" class="tab-pane active" id="friends">
+                                        <div id="users_of_app" class="panel panel-info">
+                                            <div class="panel-heading panel-primary">List of users</div>
+                                            <div class="input-group panel-heading">
+                                                <input type="text" ng-model="query" class="form-control" ng-keypress="enterOnQueryInput($event)" placeholder="Search Friend">
+                                                <span class="input-group-btn">
+                                                    <button class="btn btn-default" ng-click="searchFriend()" type="button"><span class="glyphicon glyphicon-search"></span></button>
+                                                </span>
+                                            </div><!-- /input-group -->
+                                            <div class="user-list-name-container list-group">
+                                                <a class="list-group-item" ng-class="{ 'active': x.active }" ng-repeat="x in friends | filter:query | orderBy:totalMessages" ng-click="getUserId($event,x)">
+                                                    <span>
+                                                        {{x.user_fname}}
+                                                        <span ng-hide="x.noOfUnreadMessages == 0" class="badge">{{x.noOfUnreadMessages}}</span>
+                                                        <span ng-show="x.startTyping === true" class="badge"><span class="glyphicon glyphicon-option-horizontal"></span></span>
+                                                    </span>
+                                                    <i class="glyphicon glyphicon-user user-icon" ng-class="{ 'online': x.online}"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div role="tabpanel" class="tab-pane" id="findFriends" ng-controller="searchController">
+                                        <div id="search-container" class="search-container panel panel-info">
+                                            <div class="input-group panel-heading">
+                                                <input type="text" ng-model="searchFriendInput" class="form-control" ng-keypress="enterOnQueryInput($event)" placeholder="Search Friend">
+                                                <span class="input-group-btn">
+                                                    <button class="btn btn-default" ng-click="searchFriend()" type="button"><span class="glyphicon glyphicon-search"></span></button>
+                                                </span>
+                                            </div><!-- /input-group -->
+                                            <!--<input type="text" id="Text1" ng-model="searchFriendInput" ng-keypress="enterOnQueryInput($event)" />
+                                            <button id="search" ng-click="searchFriend()">search</button>-->
+                                            <ul id="search-result-container" class="list-group">
+                                                <li class="friend-found list-group-item" ng-repeat="friend in friendsFound">
+                                                        <span class="friend-found-name">{{friend.user_fname}}</span>
+                                                        <span class="friend-found-id ankurb">{{friend.user_id}}</span>
+                                                        <div class="btn" data-toggle="tooltip" data-placement="right" title="Add Friend" ng-click="sendFriendRequest(friend,$index)" ng-class="{'btn-default disabled': friend.sent, 'btn-success':friend.sent===false}" ><span sr-only="{{friend.innerhtml}}" class="glyphicon glyphicon-plus success"></span></div>
+                                                </li>
+                                            </ul>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div id="chatlog" class="col-md-8">
+                            <div id="friend_chat_kbbaldha" ng-show="(currentFriendObj != undefined && currentFriendObj != null)" class="friend_chat panel" ng-class="{ 'panel-success': currentFriendObj.online, 'panel-danger': !currentFriendObj.online}">
+                                <div id="friend_name" class="friend_name panel-heading">{{currentFriendObj.user_fname}}</div>
+                                <!-- The file upload button-->
+                                <form action="" method="post" enctype="multipart/form-data" id="upload-form">
+                                    <input type="file" name="file-upload" id="file-upload" onchange=" angular.element(this).scope().fileNameChanged(this)" />
+                                </form>
+                                <div class="progress">
+                                    <div class="progress-bar" ng-style="{width: currentFriendObj.uploadPercent + '%'}" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+                                        {{currentFriendObj.uploadPercent}}%
+                                    </div>
+                                </div>
+                                <div id="friend_chat_log" class="friend_chat_log">
+                                    <button class="btn load-more btn-primary btn-sm btn-block"  ng-click="onLoadMoreBtnClicked()" ng-hide="currentFriendObj.loadMore.hideLoadMore == true"  >{{currentFriendObj.loadMore.html}}</button>
+                                    <div class="msg-container" ng-repeat="msg in currentFriendObj.messages">
+
+                                        <div ng-if="(msg[currentFriendObj.type] != undefined && msg[currentFriendObj.type] != null)" >
+                                            <div ng-if="(msg.file == undefined || msg.file == null)" class="friend_chat_msg bubble me"> {{msg[currentFriendObj.type]}} </div>
+                                            <div ng-if="(msg.file != undefined && msg.file != null)" class="file">
+                                                <div class="file-request-container">
+                                                    <div class="file-name">{{msg.file}}</div>
+                                                    <div class="file-accept-reject-buttons-container">
+                                                        <div class="accept add-button button-class btn btn-success" ng-click="acceptFileRequest(msg)">Accept</div>
+                                                        <div class="reject cancel-button button-class btn btn-default">Reject</div>
+                                                    </div>
+                                                </div>
+                                                 
+                                            </div>
+                                        </div>
+                                        <div ng-if="(msg[currentFriendObj.clientType] != undefined && msg[currentFriendObj.clientType] != null)" class="">
+                                         <div ng-if="(msg.file == undefined || msg.file == null)" class="me_chat bubble you"> {{msg[currentFriendObj.clientType]}} </div>
+                                            <div ng-if="(msg.file != undefined && msg.file != null)" class="file">
+                                                <div class="file-sent-container">
+                                                    <div class="file-name">{{msg.file}}:<span>{{msg.text}}</span></div>
+                                                </div>
+                                            </div>
+                                          </div>
+                                        <div ng-if="(msg.currentFile != undefined && msg.currentFile != null)" class="date-display"> {{msg.currentFile}} </div>
+                                        <div ng-if="(msg.unreadMsgs == 'true')" class="date-display">{{currentFriendObj.unreadMsgsValue}} unread messages </div>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <input type="text" id="message_input" ng-model="msgInputBoxValue" ng-keypress="enterOnMsgInput($event)" class="form-control" />
+                                    <span class="input-group-btn">
+                                        <button id="kbbaldha" ng-click="sendMessage()" class="btn btn-success"><span class="glyphicon glyphicon-send"></span></button>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="notification-and-search" class="col-md-3" ng-controller="notificationController">
+                    <div id="notifications-container" class="notifications-container panel panel-info">
+                        <div class="panel-heading">Notifications</div>
+                        <div id="notification-holder" class="notifications-holder panel-body">
+                            <div class="notification list-group" ng-repeat="notification in notifications | orderBy:'+':true">
+                                <div class="list-group-item list-group-item-info" ng-if="notification.type == 0">
+                                    <div class="friend-req-sender">{{notification.user_fname}} wants to be your friend</div>
+                                    <div class="add-button button-class btn btn-success" ng-click="acceptClicked(notification)">Accept</div>
+                                    <div class="cancel-button button-class btn btn-default" ng-click="cancelClicked(notification)">Cancel</div>
+                                </div>
+                                <div class="list-group-item list-group-item-success alert alert-success" role="alert" ng-if="notification.type == 1">
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                       {{notification.user_fname}} accepted your friend request.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="text/javascript" src="/scripts/mainscript.js"></script>
+    <script type="text/javascript" src="/javascripts/myChatApp.js"></script>
+    <script type="text/javascript" src="/javascripts/controller.js"></script>
+    <script type="text/javascript" src="/javascripts/notificationController.js"></script>
+    <script type="text/javascript" src="/javascripts/searchController.js"></script>
+
+</body>
+
+</html>
