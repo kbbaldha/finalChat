@@ -12,7 +12,9 @@ var routes = require('./routes/index');
 var users = require('./routes/users');
 var fs = require("fs");
 var app = express();
-var server = app.listen(3030, '192.168.1.118');
+var ipaddress = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1' ;
+var port = process.env.OPENSHIFT_NODEJS_PORT || 8080;
+var server = app.listen(port, ipaddress);
 var io = require('socket.io').listen(server);
 
 // view engine setup
